@@ -202,7 +202,6 @@ public class Main {
         //...
 
 
-
         //Mật mã Hoán vị (Rail Fence)
 
         String plaintext = "meetmeafterthetogaparty";
