@@ -65,7 +65,20 @@ public class Main {
         return ciphertext.toString();
     }
 
+    // MẬT MÃ VIGENERE – LẶP KHÓA - Giải mã
+    public static String vigenereDecipher(String ciphertext, String key) {
+        StringBuilder plaintext = new StringBuilder();
+        int keyLength = key.length();
+        for (int i = 0; i < ciphertext.length(); i++) {
+            char cipherChar = ciphertext.charAt(i);
+            char keyChar = key.charAt(i % keyLength); // Lặp lại chuỗi khóa khi cần thiết
 
+            int shift = keyChar - 'A'; // Xác định số lượng dịch chuyển dựa trên ký tự trong chuỗi khóa
+            char decryptedChar = (char) (((cipherChar - 'A' - shift + 26) % 26) + 'A'); // Giải mã
+            plaintext.append(decryptedChar);
+        }
+        return plaintext.toString();
+    }
 
 
     //MẬT MÃ VIGENERE – AUTOKEY
@@ -89,6 +102,26 @@ public class Main {
         return ciphertext.toString();
     }
 
+    // MẬT MÃ VIGENERE – AUTOKEY - Giải mã
+    public static String vigenereDecipherAutokey(String ciphertext, String key) {
+        StringBuilder plaintext = new StringBuilder();
+        int keyLength = key.length();
+        StringBuilder fullKey = new StringBuilder(key);
+
+        // Tạo khóa đầy đủ bằng cách nối khóa đã cho với văn bản đã giải mã
+        while (fullKey.length() < ciphertext.length()) {
+            fullKey.append(ciphertext.charAt(fullKey.length() - keyLength));
+        }
+        for (int i = 0; i < ciphertext.length(); i++) {
+            char cipherChar = ciphertext.charAt(i);
+            char keyChar = fullKey.charAt(i);
+
+            int shift = keyChar - 'a'; // Xác định số lượng dịch chuyển dựa trên ký tự trong chuỗi khóa
+            char decryptedChar = (char) (((cipherChar - 'a' - shift + 26) % 26) + 'a'); // Giải mã
+            plaintext.append(decryptedChar);
+        }
+        return plaintext.toString();
+    }
 
 
     // Mật mã Monoalphabetic -- Mã đơn bảng chữ
@@ -102,31 +135,138 @@ public class Main {
         //W -> L, X -> D, Y -> N, Z -> B
         for (int i = 0; i < 26; i++) {
             map.put((char) ('A' + i), key.charAt(i));
-            map.put((char) ('a' + i), key.charAt(i));
+            //map.put((char) ('a' + i), key.charAt(i));
         }
 
         // Mã hóa từng ký tự trong văn bản gốc
         for (char ch : plaintext.toCharArray()) {
-            // Kiểm tra xem ký tự có trong bảng chữ cái không
             if (Character.isLetter(ch)) {
                 ciphertext.append(map.get(ch));
             } else {
-                // Giữ nguyên các ký tự không phải chữ cái
                 ciphertext.append(ch);
             }
         }
         return ciphertext.toString();
     }
 
+    // Mật mã Monoalphabetic - Giải mã
+    public static String monoalphabeticDecipher(String ciphertext, String key) {
+        StringBuilder plaintext = new StringBuilder();
+        HashMap<Character, Character> map = new HashMap<>();
+
+        // Tạo bảng ánh xạ từ các ký tự trong khóa sang các ký tự trong bảng chữ cái tiếng Anh
+        for (int i = 0; i < 26; i++) {
+            map.put(key.charAt(i), (char) ('A' + i));
+            //map.put(Character.toLowerCase(key.charAt(i)), (char) ('a' + i));
+        }
+
+        // Giải mã từng ký tự trong văn bản mã hóa
+        for (char ch : ciphertext.toCharArray()) {
+            if (Character.isLetter(ch)) {
+                plaintext.append(map.get(ch));
+            } else {
+                plaintext.append(ch);
+            }
+        }
+        return plaintext.toString();
+    }
+
 
 
     //// Playfair
+    public static char[][] initializeKeyMatrix(String key) {
+        char[][] keyMatrix = new char[5][5];
+        String keyWithoutDuplicates = removeDuplicates(key + "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        int i = 0, j = 0;
+        for (char c : keyWithoutDuplicates.toCharArray()) {
+            if (j == 5) {
+                j = 0;
+                i++;
+            }
+            if (i == 5)
+                break;
+            if (c == 'J') // In Playfair, I and J are typically treated as the same letter
+                continue;
+            keyMatrix[i][j] = c;
+            j++;
+        }
+        return keyMatrix;
+    }
 
+    public static String removeDuplicates(String str) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            if (!result.toString().contains(String.valueOf(str.charAt(i)))) {
+                result.append(str.charAt(i));
+            }
+        }
+        return result.toString();
+    }
+
+    public static String encrypt(String plaintext, char[][] keyMatrix) {
+        StringBuilder ciphertext = new StringBuilder();
+        String[] digraphs = generateDigraphs(plaintext.toUpperCase());
+        for (String digraph : digraphs) {
+            int[] pos1 = findPosition(digraph.charAt(0), keyMatrix);
+            int[] pos2 = findPosition(digraph.charAt(1), keyMatrix);
+            char encryptedChar1, encryptedChar2;
+            if (pos1[0] == pos2[0]) { // gióng hàng
+                encryptedChar1 = keyMatrix[pos1[0]][(pos1[1] + 1) % 5];
+                encryptedChar2 = keyMatrix[pos2[0]][(pos2[1] + 1) % 5];
+            } else if (pos1[1] == pos2[1]) { // cột
+                encryptedChar1 = keyMatrix[(pos1[0] + 1) % 5][pos1[1]];
+                encryptedChar2 = keyMatrix[(pos2[0] + 1) % 5][pos2[1]];
+            } else {
+                encryptedChar1 = keyMatrix[pos1[0]][pos2[1]];
+                encryptedChar2 = keyMatrix[pos2[0]][pos1[1]];
+            }
+            ciphertext.append(encryptedChar1).append(encryptedChar2);
+        }
+        return ciphertext.toString();
+    }
+
+    public static String[] generateDigraphs(String input) {
+        StringBuilder sb = new StringBuilder(input);
+        for (int i = 0; i < sb.length() - 1; i += 2) {
+            if (sb.charAt(i) == sb.charAt(i + 1)) {
+                sb.insert(i + 1, 'X');
+            }
+        }
+        if (sb.length() % 2 != 0) {
+            sb.append('X');
+        }
+        String[] digraphs = new String[sb.length() / 2];
+        for (int i = 0; i < sb.length(); i += 2) {
+            digraphs[i / 2] = sb.substring(i, i + 2);
+        }
+        return digraphs;
+    }
+    public static int[] findPosition(char c, char[][] keyMatrix) {
+        int[] position = new int[2];
+        for (int i = 0; i < keyMatrix.length; i++) {
+            for (int j = 0; j < keyMatrix[i].length; j++) {
+                if (keyMatrix[i][j] == c) {
+                    position[0] = i;
+                    position[1] = j;
+                    return position;
+                }
+            }
+        }
+        return position;
+    }
+
+    public static void printMatrix(char[][] matrix) {
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                System.out.print(matrix[i][j] + " ");
+            }
+            System.out.println();
+        }
+    }
 
 
     ///Mật mã Hoán vị (Rail Fence)
     public static String railFenceCipherEncrypt(String plaintext, int key) {
-        // Tạo mảng 2D để lưu trữ văn bản theo dạng mật mã hoán vị
         char[][] rail = new char[key][plaintext.length()];
 
         // Khởi tạo các ô trong mảng với dấu cách
@@ -199,19 +339,22 @@ public class Main {
 
 
         // Playfair
+        char[][] matrix = initializeKeyMatrix("beautyis".toUpperCase());
+        printMatrix(matrix);
+        int [] x = findPosition('L', matrix);
+        for (int i = 0; i < x.length; i++) {
+            System.out.println(x[i]);
+        }
+        String ciphertext = encrypt("ALLWORKANDNOP", matrix);
+        System.out.println(ciphertext);
         //...
 
 
         //Mật mã Hoán vị (Rail Fence)
 
-        String plaintext = "meetmeafterthetogaparty";
-        int key = 2;
 
-        // Mã hóa văn bản gốc
-        String ciphertext = railFenceCipherEncrypt(plaintext, key);
 
-        // In ra kết quả mã hóa
-        System.out.println("Ciphertext: " + ciphertext);
+
 
     }
 }
